@@ -82,22 +82,51 @@ if __name__ == '__main__':
     print ("No of features = ", m_feature)
     print ("No of Min Samples Leaf = ", leafsz)
     print ("CrossValidation -> No of folds = ", n_fld)
+    conf = ['A']
 
     for col in conf: #['A','B','C','D','E','F','G']:
         y = model_on[col+'_f']
+        y = np.array(y, dtype=pd.Series)
+        # print(np.isnan(y).sum())
+        print(X.shape)
         y_ext = ext_test_on[col+'_f']
         print ("\r\n****************************")
         print ("Building model for option ",col)
         
-        clfr = RandomForestClassifier(n_estimators = n_estim, max_features=m_feature,min_samples_leaf = leafsz, max_depth = None,min_samples_split = 2,n_jobs=-1)
-        train_fit = clfr.fit(X,y)
-        trainpreds = train_fit.predict(X)
-        ct = pd.crosstab(y, trainpreds, rownames=['actual'], colnames=['preds'])
-        print("Confusion Matrix for Training set")
-        print(ct)
+        # clfr = RandomForestClassifier(n_estimators = n_estim, max_features=m_feature,min_samples_leaf = leafsz, max_depth = None,min_samples_split = 2,n_jobs=-1)
+        # train_fit = clfr.fit(X,y)
+        # trainpreds = train_fit.predict(X)
+        # ct = pd.crosstab(y, trainpreds, rownames=['actual'], colnames=['preds'])
+        # print("Confusion Matrix for Training set")
+        # print(ct)
+        # print("Model Done")
 
-        print("Done")
         ##### Cross validation is not working
+        from sklearn.model_selection import KFold
+        kf = KFold(n_splits=n_fld)
+        # kf.get_n_splits(X)
+        results_pred = sp.zeros(len(y))
+        testpreds = sp.zeros(len(y))
+        for train_index, test_index in kf.split(X, y):
+            print("Train:", train_index, "Test:", test_index)
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+            clfr = RandomForestClassifier(n_estimators=n_estim, max_features=m_feature, min_samples_leaf=leafsz,
+                                          max_depth=None, min_samples_split=2, n_jobs=-1)
+            print(X_train.isnull().sum().to_string())
+            # print(np.isnan(y_train).sum())
+            print(y[24381])
+            print("Now y_train")
+
+            print(y_train)
+
+            y_train = pd.Series(y_train)
+            print(y_train.value_counts())
+            train_fit = clfr.fit(X_train, y_train)
+            results_pred[test_index] = train_fit.predict_proba(X_test)
+            testpreds[test_index] = train_fit.predict(X_test)
+            print('lets see')
+
         # # cv = cross_validation.KFold(len(X), n_folds = n_fld, indices = False)
         # # cv = cross_validation.KFold(len(X), n_folds = n_fld)
         # from sklearn.model_selection import KFold
@@ -120,9 +149,9 @@ if __name__ == '__main__':
         # best=clfr.feature_importances_
         # print("feature_importances:",best)
         #
-        # ct = pd.crosstab(y, testpreds, rownames=['actual'], colnames=['preds'])
-        # print ("Confusion Matrix for Training set")
-        # print(ct)
+        ct = pd.crosstab(y, testpreds, rownames=['actual'], colnames=['preds'])
+        print ("Confusion Matrix for Training set")
+        print(ct)
 
         # Now calculate % accuracy
         conf_matrix=ct.get_values()
@@ -144,7 +173,7 @@ if __name__ == '__main__':
         acc = 100*sum_diag/total_sum
         print ("External Test accuracy : ",acc,"%")
 
-        # Now plot the model
+
 
     
 
